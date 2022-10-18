@@ -1,93 +1,88 @@
-import { getDocs, collection, getDoc, doc, addDoc } from 'firebase/firestore'
+import { ObjectID } from 'bson';
 import db from '../config.js'
 
 const dinerController = {
     getMenuItemTypes: async (req, res) => {
         try {
-            const typesCollection = collection(db, "types")
-            const typesSnap = await getDocs(typesCollection)
-            console.log(typesSnap)
-            const typeNames = Array()
-            typesSnap.forEach(doc => {
-                typeNames.push(doc.id)
-            })
-            res.send(typeNames)
+            const typesCollection = db.collection('types');
+            const typesArray = await typesCollection.find({}).toArray()
+
+            const typeIds = typesArray.map(type => type._id)
+            res.status(200).send(typeIds)
         }
         catch (err) {
-            res.send('error')
+            res.status(500).send('error')
 
         }
     },
     getFoods: async (req, res) => {
         const { type } = req.params
         try {
-            const typeCollection = collection(db, 'types')
-            const typeDocRef = doc(typeCollection, type)
-            const typeDocSnap = await getDoc(typeDocRef)
-            if (typeDocSnap.exists()) {
-                const foodRefs = typeDocSnap.data().foods
-                const foodItems = await Promise.all(foodRefs.map(async foodRef => {
-                    const foodDoc = doc(db, 'foods', foodRef)
-                    const foodItem = (await getDoc(foodDoc)).data()
-                    return foodItem
-                }))
-                res.send(foodItems)
+            const arr = await db.collection('types').findOne({ _id: type })
+
+            if (!arr) {
+                res.status(400).send('No such type')
             }
             else {
-                console.log('no data')
+                const foodIds = arr.foodList
+
+                const foodMaps = await Promise.all(foodIds.map(async foodId =>
+                    await db.collection('foods').findOne({ _id: foodId })
+                ))
+                res.send(foodMaps)
             }
+
+
         }
         catch (err) {
             console.log(err)
-            res.send('error')
+            res.status(500).send('error')
 
         }
     },
     placeOrder: async (req, res) => {
         try {
             const { dinerName, dinerPhoneNumber, orderedItems, price } = req.body
-            const data = req.body
+
             const orderList = orderedItems.map(item => ({
                 referenceId: item.referenceId,
                 name: item.name,
                 quantity: item.quantity,
             }))
+            const foodMaps = await Promise.all(orderList.map(async food =>
+                (await db.collection('foods').findOne({ _id: ObjectID(food.referenceId) })).price * food.quantity
+            ))
+            const calculatedPrice = foodMaps.reduce((total, current) => total + current)
 
-            const orderedItemsPrices = await Promise.all(orderList.map(async orderedItem => {
-                return (await getDoc(doc(db, 'foods', orderedItem.referenceId))).data().price * orderedItem.quantity
-            }))
-
-            const calculatedPrice = orderedItemsPrices.reduce((total, current) => total + current)
             if (price !== calculatedPrice) {
-                console.log(calculatedPrice)
-                res.send('order not placed')
-            } else {
-                const ordersCollection = collection(db, 'orders')
-                const orderAddingReference = (await addDoc(ordersCollection, { phoneNumber: dinerPhoneNumber })).id
-
-                const ordersSubCollection = collection(ordersCollection, orderAddingReference, 'orderItems')
-                const subCollectionOrdersReferences = await Promise.all(orderList.map(async item => (
-                    (await addDoc(ordersSubCollection, item)).id
-                )))
-                console.log(subCollectionOrdersReferences)
-
-                const usersCollection = collection(db, 'users')
-                const usersOrdersSubCollection = collection(usersCollection, dinerPhoneNumber, "orders")
+                res.status(409).send('Order not placed')
+            }
+            else {
+                const placedOrder = await db.collection('orders').insertOne({ ordersItems: orderList })
+                const orderId = placedOrder.insertedId
 
                 const userData = {
                     user: dinerName,
-                    orderId: orderAddingReference,
+                    orderId: orderId,
                     pricePaid: calculatedPrice
                 }
 
-                const usersOrdersReference = (await addDoc(usersOrdersSubCollection, userData)).id
+                const userDocument = await db.collection('users').findOne({ _id: dinerPhoneNumber })
 
-                // const userOrdersSubCollection = collection()
+                if (!userDocument) {
+                    await db.collection('users').insertOne({ _id: dinerPhoneNumber, orderList: [{ name: dinerName, orderId: orderId }] })
+                }
+                else {
+                    console.log("Running")
+                    await db.collection('users').updateOne({ _id: dinerPhoneNumber }, { $push: { orderList: { name: dinerName, orderId: orderId } } })
+                }
+                res.status(200).send("OK")
             }
+
         }
         catch (err) {
             console.log(err)
-            res.send(err)
+            res.status(500).send(err)
         }
     }
 }
