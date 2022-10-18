@@ -1,7 +1,4 @@
-import { async } from '@firebase/util';
-import e from 'express';
-import express from 'express'
-import { addDoc, collection, getDocs, query, where, doc, updateDoc, arrayUnion, arrayRemove, setDoc, getDoc, deleteDoc } from "firebase/firestore";
+import { addDoc, doc, updateDoc, arrayUnion, arrayRemove, setDoc, getDoc, deleteDoc, collection } from "firebase/firestore";
 import db from '../config.js'
 const adminController = {
 
@@ -19,19 +16,11 @@ const adminController = {
                 const addedFood = await updateDoc(typeDoc, {
                     foods: arrayUnion(addingReference.id)
                 })
-            }
-            else {
+            } else {
                 const addedFood = await setDoc(typeDoc, {
                     foods: arrayUnion(addingReference.id)
                 })
             }
-            // console.log(addedFood.id)
-            // const foodExtendingReference = await setDoc
-            // console.log(addingReference.id)
-            // const typeCollection = collection(db, 'types', type, 'foods')
-            // const addingReference2 = await addDoc(typeCollection, {
-            //     id: addingReference.id
-            // })
             res.send({
                 id: addingReference.id,
                 message: 'Success'
@@ -55,11 +44,7 @@ const adminController = {
             if (docSnap.exists()) {
 
                 const type = docSnap.data().type;
-                console.log(type);
-
                 await deleteDoc(foodDocRef);
-
-
                 const typeDocRef = doc(db, 'types', type);
                 updateDoc(typeDocRef, { foods: arrayRemove(ref) });
                 res.send("deleted")

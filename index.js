@@ -6,6 +6,7 @@ import { addDoc, getDocs, collection, query, where } from 'firebase/firestore'
 import router from './routers/auth.js'
 import foodRouter from './routers/menu.js'
 import adminRouter from './routers/admin.js'
+import dinerRouter from './routers/diner.js'
 
 const app = express()
 app.use(cors({
@@ -13,6 +14,7 @@ app.use(cors({
 }))
 app.use(bodyParser.json())
 app.use('/admin', adminRouter)
+app.use('/diner', dinerRouter)
 
 const PORT = process.env.PORT | 8080
 
