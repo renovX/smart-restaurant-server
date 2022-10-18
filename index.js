@@ -1,4 +1,5 @@
 import express from 'express'
+//import db from './config.js'
 import cors from 'cors'
 import bodyParser from 'body-parser'
 import db from "./config.js"

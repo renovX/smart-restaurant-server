@@ -1,17 +1,36 @@
 import { addDoc, doc, updateDoc, arrayUnion, arrayRemove, setDoc, getDoc, deleteDoc, collection } from "firebase/firestore";
+import { ObjectId } from "mongodb";
+import { mongoose, Schema } from "mongoose";
 import db from '../config.js'
+
+//const Food = mongoose.model('Food', new Schema({ name: String, description: String, price: Number }), 'foods')
+//const typeSchema = new Schema({ _id: String, foodList: Array }, { collection: 'types' })
+
 const adminController = {
 
     addFood: async (req, res) => {
         const { name, price, description, type } = req.body
         const foodItem = req.body
         try {
-            const foodsCollection = collection(db, 'foods')
-            const addingReference = await addDoc(foodsCollection, foodItem)
 
-            const typesCollection = collection(db, 'types')
-            const typeDoc = doc(db, 'types', type)
-            const docSnap = await getDoc(typeDoc)
+            //const newfood = new Food({ name: name, })
+            const foodDoc = await db.collection('foods').insertOne({ name: name, description: description, price: price, type: type });
+            const typeDoc = await db.collection('types').findOne({ _id: type })
+            if (typeDoc) {
+                await db.collection('types').updateOne({ _id: type }, { $push: ObjectId(foodDoc.insertedId) })
+            }
+            else {
+                await db.collection('types').insertOne({ _id: type, foodList: [foodDoc.insertedId] })
+            }
+            res.send("OK")
+
+            //const foodsCollection = collection(db, 'foods')
+
+            //const addingReference = await addDoc(foodsCollection, foodItem)
+
+            //const typesCollection = collection(db, 'types')
+            //const typeDoc = doc(db, 'types', type)
+            /*const docSnap = await getDoc(typeDoc)
             if (docSnap.exists()) {
                 const addedFood = await updateDoc(typeDoc, {
                     foods: arrayUnion(addingReference.id)
@@ -24,7 +43,7 @@ const adminController = {
             res.send({
                 id: addingReference.id,
                 message: 'Success'
-            })
+            })*/
         }
         catch (e) {
             console.log(e)
