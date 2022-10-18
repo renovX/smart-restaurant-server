@@ -1,10 +1,8 @@
-import { addDoc, doc, updateDoc, arrayUnion, arrayRemove, setDoc, getDoc, deleteDoc, collection } from "firebase/firestore";
+
 import { ObjectId } from "mongodb";
 import { mongoose, Schema } from "mongoose";
 import db from '../config.js'
 
-//const Food = mongoose.model('Food', new Schema({ name: String, description: String, price: Number }), 'foods')
-//const typeSchema = new Schema({ _id: String, foodList: Array }, { collection: 'types' })
 
 const adminController = {
 
@@ -17,33 +15,15 @@ const adminController = {
             const foodDoc = await db.collection('foods').insertOne({ name: name, description: description, price: price, type: type });
             const typeDoc = await db.collection('types').findOne({ _id: type })
             if (typeDoc) {
-                await db.collection('types').updateOne({ _id: type }, { $push: ObjectId(foodDoc.insertedId) })
+                console.log(typeDoc)
+                await db.collection('types').updateOne({ _id: type }, { $push: { foodList: ObjectId(foodDoc.insertedId) } })
+
             }
             else {
                 await db.collection('types').insertOne({ _id: type, foodList: [foodDoc.insertedId] })
             }
             res.send("OK")
 
-            //const foodsCollection = collection(db, 'foods')
-
-            //const addingReference = await addDoc(foodsCollection, foodItem)
-
-            //const typesCollection = collection(db, 'types')
-            //const typeDoc = doc(db, 'types', type)
-            /*const docSnap = await getDoc(typeDoc)
-            if (docSnap.exists()) {
-                const addedFood = await updateDoc(typeDoc, {
-                    foods: arrayUnion(addingReference.id)
-                })
-            } else {
-                const addedFood = await setDoc(typeDoc, {
-                    foods: arrayUnion(addingReference.id)
-                })
-            }
-            res.send({
-                id: addingReference.id,
-                message: 'Success'
-            })*/
         }
         catch (e) {
             console.log(e)
@@ -55,36 +35,30 @@ const adminController = {
 
     },
     removeFood: async (req, res) => {
-        const ref = req.body.referenceId;
-        const foodDocRef = doc(db, 'foods', ref);
 
+        const foodId = ObjectId(req.body.referenceId);
+
+        const foodDoc = await db.collection('foods').findOne({ _id: foodId })
         try {
-            const docSnap = await getDoc(foodDocRef)
-            if (docSnap.exists()) {
+            const foodType = foodDoc.type
 
-                const type = docSnap.data().type;
-                await deleteDoc(foodDocRef);
-                const typeDocRef = doc(db, 'types', type);
-                updateDoc(typeDocRef, { foods: arrayRemove(ref) });
-                res.send("deleted")
+            await db.collection('foods').deleteOne({ _id: foodId }, (err, res) => { console.log(res) })
+            await db.collection('types').updateOne({ _id: foodType }, { $pull: { foodList: foodId } })
+            res.send("OK")
 
-            }
-            else {
-                console.log("Food not found");
-            }
         }
+
         catch (err) {
             console.log(err);
+            res.send(err)
         }
     },
     updateFood: async (req, res) => {
         const { refId, name, price, description } = req.body;
-        const foodDocRef = doc(db, 'foods', refId);
-        updateDoc(foodDocRef, {
-            name: name,
-            price: price,
-            description: description
-        });
+        const foodId = ObjectId(refId);
+
+        const ans = await db.collection('foods').updateOne({ _id: foodId }, { $set: { name: name, price: price, description: description } })
+        res.send(ans)
     }
 }
 export default adminController
