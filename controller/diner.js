@@ -73,7 +73,6 @@ const dinerController = {
                     await db.collection('users').insertOne({ _id: dinerPhoneNumber, orderList: [{ name: dinerName, orderId: orderId }] })
                 }
                 else {
-                    console.log("Running")
                     await db.collection('users').updateOne({ _id: dinerPhoneNumber }, { $push: { orderList: { name: dinerName, orderId: orderId } } })
                 }
                 res.status(200).send("OK")
