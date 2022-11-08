@@ -58,7 +58,7 @@ const dinerController = {
                 res.status(409).send('Order not placed')
             }
             else {
-                const placedOrder = await db.collection('orders').insertOne({ ordersItems: orderList, table: { table }, dinein: { dinein } })
+                const placedOrder = await db.collection('orders').insertOne({ ordersItems: orderList, table: table, dinein: dinein })
                 const orderId = placedOrder.insertedId
 
                 const userData = {
