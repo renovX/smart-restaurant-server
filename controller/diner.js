@@ -42,7 +42,7 @@ const dinerController = {
     },
     placeOrder: async (req, res) => {
         try {
-            const { dinerName, dinerPhoneNumber, orderedItems, price } = req.body
+            const { dinein, dinerName, dinerPhoneNumber, orderedItems, price, table } = req.body
 
             const orderList = orderedItems.map(item => ({
                 referenceId: item.referenceId,
@@ -58,7 +58,7 @@ const dinerController = {
                 res.status(409).send('Order not placed')
             }
             else {
-                const placedOrder = await db.collection('orders').insertOne({ ordersItems: orderList })
+                const placedOrder = await db.collection('orders').insertOne({ ordersItems: orderList, table: { table }, dinein: { dinein } })
                 const orderId = placedOrder.insertedId
 
                 const userData = {
