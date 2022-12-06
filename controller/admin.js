@@ -1,18 +1,16 @@
-
-import { ObjectId } from "mongodb";
-import { mongoose, Schema } from "mongoose";
+import { ObjectId } from "mongodb"
 import db from '../config.js'
 
 
 const adminController = {
 
     addFood: async (req, res) => {
-        const { name, price, description, type } = req.body
+        const { name, price, description, type, veg, imgUrl } = req.body
         const foodItem = req.body
         try {
 
             //const newfood = new Food({ name: name, })
-            const foodDoc = await db.collection('foods').insertOne({ name: name, description: description, price: price, type: type });
+            const foodDoc = await db.collection('foods').insertOne({ name: name, description: description, price: price, type: type, veg: veg, image: imgUrl });
             const typeDoc = await db.collection('types').findOne({ _id: type })
             if (typeDoc) {
                 console.log(typeDoc)
@@ -55,10 +53,10 @@ const adminController = {
     },
     updateFood: async (req, res) => {
         try {
-            const { refId, name, price, description } = req.body;
+            const { refId, name, price, description, veg, imgUrl } = req.body;
             const foodId = ObjectId(refId);
 
-            const ans = await db.collection('foods').updateOne({ _id: foodId }, { $set: { name: name, price: price, description: description } })
+            const ans = await db.collection('foods').updateOne({ _id: foodId }, { $set: { name: name, price: price, description: description, veg: veg, image: imgUrl } })
             res.status(200).send(ans)
         }
         catch (e) {
