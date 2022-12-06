@@ -13,7 +13,6 @@ const adminController = {
             const foodDoc = await db.collection('foods').insertOne({ name: name, description: description, price: price, type: type, veg: veg, image: imgUrl });
             const typeDoc = await db.collection('types').findOne({ _id: type })
             if (typeDoc) {
-                console.log(typeDoc)
                 await db.collection('types').updateOne({ _id: type }, { $push: { foodList: ObjectId(foodDoc.insertedId) } })
 
             }
@@ -61,6 +60,62 @@ const adminController = {
         }
         catch (e) {
             res.status(500).send('Server error')
+        }
+    },
+
+    getAllFoods: async (req, res) => {
+        try {
+            const foodsCollection = await db.collection('foods')
+
+            if (!foodsCollection) {
+                res.status(404).send('Request error, please check the request parameters')
+            }
+            else {
+                const foodArray = await foodsCollection.find({}).toArray()
+
+                const foods = {}
+
+                foodArray.forEach(food => {
+                    const currentType = food.type
+                    if (foods[currentType]) {
+                        foods[currentType].push(food)
+                    }
+                    else {
+                        foods[currentType] = [food]
+                    }
+                })
+
+                res.send(foods)
+            }
+        }
+        catch (e) {
+            res.status(500).send('Error! Cannot fetch foods')
+        }
+    },
+
+    removeType: async (req, res) => {
+        const { type } = req.body
+
+        try {
+            const arr = await db.collection('types').findOne({ _id: type })
+
+            if (!arr) {
+                res.status(400).send('No such type')
+            }
+            else {
+                const foodIds = arr.foodList
+
+                await Promise.all(foodIds.map(async foodId => {
+                    await db.collection('foods').deleteOne({ _id: foodId })
+                }))
+
+                await db.collection('types').deleteOne({ _id: type })
+                res.status(200).send('Deleted Successfully')
+
+            }
+        }
+        catch (e) {
+            res.status(500).send('Error! Cannot delete type')
         }
     }
 }
