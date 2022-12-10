@@ -6,7 +6,10 @@ import adminController from '../controller/admin.js';
 const adminRouter = express.Router()
 
 adminRouter.post('/add-item', adminController.addFood)
-adminRouter.post('/delete-item', adminController.removeFood);
+adminRouter.post('/remove-item', adminController.removeFood)
 adminRouter.post('/update-item', adminController.updateFood)
+adminRouter.post('/remove-type', adminController.removeType)
+adminRouter.get('/get-all-foods', adminController.getAllFoods)
+adminRouter.get('/get-all-foods', adminController.getAllFoods)
 
 export default adminRouter
