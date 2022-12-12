@@ -5,12 +5,16 @@ import db from '../config.js'
 const adminController = {
 
     addFood: async (req, res) => {
+
         const { name, price, description, type, veg, imgUrl } = req.body
+
         const foodItem = req.body
         try {
 
             //const newfood = new Food({ name: name, })
-            const foodDoc = await db.collection('foods').insertOne({ name: name, description: description, price: price, type: type, veg: veg, image: imgUrl });
+
+            const foodDoc = await db.collection('foods').insertOne({ name: name, description: description, price: price, type: type, veg: veg, image: imgUrl })
+
             const typeDoc = await db.collection('types').findOne({ _id: type })
             if (typeDoc) {
                 await db.collection('types').updateOne({ _id: type }, { $push: { foodList: ObjectId(foodDoc.insertedId) } })
@@ -53,6 +57,7 @@ const adminController = {
         }
     },
     updateFood: async (req, res) => {
+
         try {
             const { refId, name, price, description, veg, imgUrl } = req.body;
             const foodId = ObjectId(refId);
@@ -63,6 +68,7 @@ const adminController = {
         catch (e) {
             res.status(500).send('Server error')
         }
+
     },
 
     getAllFoods: async (req, res) => {
@@ -119,6 +125,7 @@ const adminController = {
         catch (e) {
             res.status(500).send('Error! Cannot delete type')
         }
+
     }
 }
 export default adminController
