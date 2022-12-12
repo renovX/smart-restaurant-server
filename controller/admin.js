@@ -23,7 +23,9 @@ const adminController = {
             else {
                 await db.collection('types').insertOne({ _id: type, foodList: [foodDoc.insertedId] })
             }
-            res.status(200).send("OK")
+            res.status(200).send({
+                _id: foodDoc.insertedId
+            })
 
         }
         catch (e) {
