@@ -11,5 +11,6 @@ adminRouter.post('/update-item', adminController.updateFood)
 adminRouter.post('/remove-type', adminController.removeType)
 adminRouter.get('/get-all-foods', adminController.getAllFoods)
 adminRouter.get('/get-all-foods', adminController.getAllFoods)
+adminRouter.post('/update-type', adminController.updateType)
 
 export default adminRouter
