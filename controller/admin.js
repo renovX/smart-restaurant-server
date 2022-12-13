@@ -29,7 +29,6 @@ const adminController = {
 
         }
         catch (e) {
-            console.log(e)
             res.status(500).send({
                 message: 'Success',
                 error: e
@@ -56,16 +55,34 @@ const adminController = {
             res.status(500).send(err)
         }
     },
+
     updateFood: async (req, res) => {
-
         try {
-            const { refId, name, price, description, veg, imgUrl } = req.body;
-            const foodId = ObjectId(refId);
+            const { id, name, price, description, veg, imgUrl, type } = req.body;
+            const foodId = ObjectId(id);
+            const foodItem = await db.collection('foods').findOne({ _id: foodId })
+            if (foodItem.type !== type) {
+                await db.collection('types').updateOne({ _id: foodItem.type }, { $pull: { foodList: foodId } })
+                const typeDoc = await db.collection('types').findOne({ _id: type })
+                if (typeDoc) {
+                    await db.collection('types').updateOne({ _id: type }, { $push: { foodList: foodId } })
 
-            const ans = await db.collection('foods').updateOne({ _id: foodId }, { $set: { name: name, price: price, description: description, veg: veg, image: imgUrl } })
-            res.status(200).send(ans)
+                }
+                else {
+                    await db.collection('types').insertOne({ _id: type, foodList: [foodId] })
+                }
+
+                const orignalType = await db.collection('types').findOne({ _id: foodItem.type })
+                if (orignalType.foodList.length === 0) {
+                    await db.collection('types').deleteOne({ _id: foodItem.type })
+                }
+            }
+            await db.collection('foods').updateOne({ _id: foodId }, { $set: { name, price, description, veg, image: imgUrl, type } })
+
+            res.status(200).send('OK')
         }
         catch (e) {
+            console.log(e)
             res.status(500).send('Server error')
         }
 
