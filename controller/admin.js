@@ -73,25 +73,22 @@ const adminController = {
 
     getAllFoods: async (req, res) => {
         try {
-            const foodsCollection = await db.collection('foods')
+            const foodsCollection = await db.collection('types')
 
             if (!foodsCollection) {
                 res.status(404).send('Request error, please check the request parameters')
             }
             else {
-                const foodArray = await foodsCollection.find({}).toArray()
+                const typesArray = await foodsCollection.find({}).toArray()
 
                 const foods = {}
 
-                foodArray.forEach(food => {
-                    const currentType = food.type
-                    if (foods[currentType]) {
-                        foods[currentType].push(food)
-                    }
-                    else {
-                        foods[currentType] = [food]
-                    }
-                })
+                await Promise.all(typesArray.map(async type => {
+                    foods[type._id] = await Promise.all(type.foodList.map(async foodId => (
+                        await db.collection('foods').findOne({ _id: foodId })
+                    )))
+                    return foods[type._id]
+                }))
 
                 res.send(foods)
             }
@@ -124,6 +121,31 @@ const adminController = {
         }
         catch (e) {
             res.status(500).send('Error! Cannot delete type')
+        }
+
+    },
+
+    updateType: async (req, res) => {
+        try {
+            const { oldType, newType } = req.body;
+            const arr = await db.collection('types').findOne({ _id: oldType })
+            if (!arr) {
+                res.status(400).send('No such type')
+            }
+            else {
+                console.log(arr)
+                const foodIds = arr.foodList
+
+                await db.collection('foods').updateMany({ type: oldType }, { $set: { type: newType } })
+                await db.collection('types').insertOne({ _id: newType, foodList: foodIds })
+                await db.collection('types').deleteOne({ _id: oldType })
+                res.status(200).send('OK')
+            }
+
+        }
+        catch (e) {
+            console.log(e)
+            res.status(500).send('Server error')
         }
 
     }
