@@ -6,26 +6,24 @@ const adminController = {
 
     addFood: async (req, res) => {
 
-        const { name, price, description, type, veg, imgUrl } = req.body
+        const { name, price, description, type, veg, image } = req.body
 
-        const foodItem = req.body
         try {
-
-            //const newfood = new Food({ name: name, })
-
-            const foodDoc = await db.collection('foods').insertOne({ name: name, description: description, price: price, type: type, veg: veg, image: imgUrl })
+            const foodDoc = await db.collection('foods').insertOne({ name, description, price, type, veg, image })
 
             const typeDoc = await db.collection('types').findOne({ _id: type })
             if (typeDoc) {
                 await db.collection('types').updateOne({ _id: type }, { $push: { foodList: ObjectId(foodDoc.insertedId) } })
-
             }
             else {
                 await db.collection('types').insertOne({ _id: type, foodList: [foodDoc.insertedId] })
             }
+
             res.status(200).send({
-                _id: foodDoc.insertedId
+                id: foodDoc.insertedId,
+                message: 'OK'
             })
+
 
         }
         catch (e) {
@@ -36,9 +34,10 @@ const adminController = {
         }
 
     },
+
     removeFood: async (req, res) => {
 
-        const foodId = ObjectId(req.body.referenceId);
+        const foodId = ObjectId(req.body.id);
 
         const foodDoc = await db.collection('foods').findOne({ _id: foodId })
         try {
@@ -46,20 +45,34 @@ const adminController = {
 
             await db.collection('foods').deleteOne({ _id: foodId }, (err, res) => { console.log(res) })
             await db.collection('types').updateOne({ _id: foodType }, { $pull: { foodList: foodId } })
-            res.status(200).send("OK")
+
+            const typeDocument = await db.collection('types').findOne({ _id: foodType })
+
+            if (typeDocument.foodList.length === 0) {
+                await db.collection('types').deleteOne({ _id: foodType })
+            }
+
+            res.status(200).send({
+                message: "OK"
+            })
 
         }
 
         catch (err) {
             console.log(err);
-            res.status(500).send(err)
+            res.status(500).send({
+                message: "Server error",
+                error: err
+            })
         }
     },
 
     updateFood: async (req, res) => {
         try {
-            const { id, name, price, description, veg, imgUrl, type } = req.body;
+            const { id, name, price, description, veg, image, type } = req.body;
+
             const foodId = ObjectId(id);
+
             const foodItem = await db.collection('foods').findOne({ _id: foodId })
             if (foodItem.type !== type) {
                 await db.collection('types').updateOne({ _id: foodItem.type }, { $pull: { foodList: foodId } })
@@ -77,7 +90,7 @@ const adminController = {
                     await db.collection('types').deleteOne({ _id: foodItem.type })
                 }
             }
-            await db.collection('foods').updateOne({ _id: foodId }, { $set: { name, price, description, veg, image: imgUrl, type } })
+            await db.collection('foods').updateOne({ _id: foodId }, { $set: { name, price, description, veg, image, type } })
 
             res.status(200).send('OK')
         }
@@ -90,28 +103,31 @@ const adminController = {
 
     getAllFoods: async (req, res) => {
         try {
-            const foodsCollection = await db.collection('types')
+            const typesCollection = await db.collection('types')
 
-            if (!foodsCollection) {
-                res.status(404).send('Request error, please check the request parameters')
-            }
-            else {
-                const typesArray = await foodsCollection.find({}).toArray()
+            const typesArray = await typesCollection.find({}).toArray()
 
-                const foods = {}
+            const foods = {}
 
-                await Promise.all(typesArray.map(async type => {
-                    foods[type._id] = await Promise.all(type.foodList.map(async foodId => (
-                        await db.collection('foods').findOne({ _id: foodId })
-                    )))
-                    return foods[type._id]
+            await Promise.all(typesArray.map(async type => {
+                foods[type._id] = await Promise.all(type.foodList.map(async foodId => {
+                    const { _id, ...foodDoc } = await db.collection('foods').findOne({ _id: foodId })
+                    return { id: foodId, ...foodDoc }
                 }))
+                return foods[type._id]
+            }))
 
-                res.send(foods)
-            }
+            res.send({
+                menu: foods,
+                message: "OK"
+            })
+
         }
-        catch (e) {
-            res.status(500).send('Error! Cannot fetch foods')
+        catch (err) {
+            res.status(500).send({
+                message: 'Error! Cannot fetch foods',
+                error: err
+            })
         }
     },
 
@@ -132,14 +148,18 @@ const adminController = {
                 }))
 
                 await db.collection('types').deleteOne({ _id: type })
-                res.status(200).send('Deleted Successfully')
+                res.status(200).send({
+                    message: 'Deleted Successfully'
+                })
 
             }
         }
-        catch (e) {
-            res.status(500).send('Error! Cannot delete type')
+        catch (err) {
+            res.status(500).send({
+                message: 'Error! Cannot delete type',
+                error: err
+            })
         }
-
     },
 
     updateType: async (req, res) => {
@@ -150,18 +170,21 @@ const adminController = {
                 res.status(400).send('No such type')
             }
             else {
-                console.log(arr)
                 const foodIds = arr.foodList
 
                 await db.collection('foods').updateMany({ type: oldType }, { $set: { type: newType } })
                 await db.collection('types').insertOne({ _id: newType, foodList: foodIds })
                 await db.collection('types').deleteOne({ _id: oldType })
-                res.status(200).send('OK')
+                res.status(200).send({
+                    message: 'OK'
+                })
             }
-
         }
-        catch (e) {
-            res.status(500).send('Server error')
+        catch (err) {
+            res.status(500).send({
+                message: 'Server error',
+                error: err
+            })
         }
 
     }
