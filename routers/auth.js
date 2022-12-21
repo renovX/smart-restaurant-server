@@ -2,10 +2,13 @@ import { async } from '@firebase/util'
 import express from 'express'
 import db from '../config.js'
 import { addDoc, collection, getDocs, query, where } from "firebase/firestore";
+import authController from '../controller/auth.js';
 
-const router = express.Router()
+const authRouter = express.Router()
 
-router.post('/credentials', async (req, res) => {
+authRouter.post('/signUp', authController.signUp)
+authRouter.post('/signIn', authController.signIn)
+authRouter.post('/credentials', async (req, res) => {
     const { phoneNumber } = req.body
     try {
         const db_collection = collection(db, 'usersdata', phoneNumber, 'orders')
@@ -25,4 +28,4 @@ router.post('/credentials', async (req, res) => {
     }
 })
 
-export default router
+export default authRouter

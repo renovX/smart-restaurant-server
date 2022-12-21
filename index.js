@@ -3,6 +3,7 @@ import cors from 'cors'
 import bodyParser from 'body-parser'
 import adminRouter from './routers/admin.js'
 import dinerRouter from './routers/diner.js'
+import authRouter from './routers/auth.js'
 
 const app = express()
 app.use(cors({
@@ -16,6 +17,7 @@ app.use((err, req, res, next) => {
     }
 })
 app.use(bodyParser.json())
+app.use('/auth', authRouter)
 app.use('/admin', adminRouter)
 app.use('/diner', dinerRouter)
 
